@@ -1,0 +1,8 @@
+# LoRA fine-tune stack -- install on Colab GPU, NOT on this CPU-only VM.
+# Versions pinned loosely: pin exact versions only after a successful Colab run.
+torch>=2.3
+transformers>=4.42
+peft>=0.12
+accelerate>=0.33
+datasets>=2.20
+# generate_data.py and eval.py --score need only the Python standard library.
