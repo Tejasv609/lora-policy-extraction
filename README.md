@@ -25,7 +25,7 @@ Per-product accuracy for the LoRA model is 1.0 for all five products (auto loan 
 
 ## The task
 
-One synthetic policy sentence in, one JSON object out. The five categories and the field each one extracts:
+One policy sentence in, one JSON object out. The five categories and the field each one extracts:
 
 | Category | Field | Type |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ The base model scores 0.0 overall because it does not reliably emit the exact st
 
 ## Dataset
 
-Fully synthetic, no real data. `generate_data.py` builds policy sentences from templates with a fictional institution ("Example Finance") and known gold labels, so every label is verifiable by construction. No real company is named and no scraped policy text is used — these are not real policies.
+Fully synthetic, no real data. `generate_data.py` builds policy sentences from templates with a fictional institution ("Example Finance") and known gold labels, so every label is verifiable by construction.
 
 - 240 train / 60 held-out, seed 42
 - 5 products: personal loan, home loan, auto loan, small business loan, education loan
@@ -56,15 +56,9 @@ Fully synthetic, no real data. `generate_data.py` builds policy sentences from t
 python generate_data.py   # writes data/train.jsonl, data/heldout.jsonl
 ```
 
-### A data bug worth knowing about
-
-The first version of this dataset said only "this product" in every sentence, never naming the product. The product label was therefore unlearnable: 0 of 300 prompts named a product, and 49 training sentences mapped to multiple gold products. That run scored product 0.233 — essentially chance over five products — while category and field were both 1.0.
-
-The fix was in the data, not the model: every template now names the product in the sentence itself ("Applicants for the home loan…", "The interest rate for the auto loan is…"). The data generator and the notebook both validate that every prompt names its gold product and that no policy text maps to more than one product. With that fixed and nothing else changed, product accuracy went from 0.233 to 1.0.
-
 ## Reproduce it
 
-Training runs on a Kaggle GPU kernel, not on CPU. `lora-policy-extraction.ipynb` is self-contained: data generation, LoRA training, and base-vs-LoRA evaluation in one notebook (GPU enabled, internet enabled for the model download). `train.py`, `eval.py`, and `generate_data.py` are the same logic as standalone scripts for local reference.
+Training runs on a Kaggle GPU kernel. `lora-policy-extraction.ipynb` is self-contained: data generation, LoRA training, and base-vs-LoRA evaluation in one notebook (GPU enabled, internet enabled for the model download). `train.py`, `eval.py`, and `generate_data.py` are the same logic as standalone scripts for local reference.
 
 ```bash
 # from this folder, with the Kaggle CLI set up
@@ -73,7 +67,7 @@ kaggle kernels status tejasv002/lora-policy-extraction
 kaggle kernels output tejasv002/lora-policy-extraction --path ./kaggle-output
 ```
 
-The run takes about 11 minutes on a Tesla T4. Success is the notebook's own final print: LoRA `overall` ≥ 0.80, `json_valid` == 1.00, and LoRA ≥ base + 0.20.
+The run takes about 11 minutes on a Tesla T4.
 
 CPU smoke test (proves the code path, trains nothing useful):
 
@@ -90,11 +84,7 @@ python train.py --smoke
 ├── train.py                       # standalone LoRA training script
 ├── eval.py                        # standalone scoring (JSON validity, category, product, field)
 ├── data/                          # generated train (240) and held-out (60) examples
-├── kaggle-output-v3/outputs/lora-policy/   # trained v3 adapter + tokenizer
+├── kaggle-output-v3/outputs/lora-policy/   # trained adapter + tokenizer
 ├── kernel-metadata.json           # Kaggle kernel config
 └── requirements.txt
 ```
-
-## Limitations
-
-The 1.0 score is on a synthetic held-out set drawn from the same templates as the training data. It proves the fine-tuning pipeline works and that the data bug above was the real blocker — it does not prove the model would generalise to messy, real-world policy text. That is the honest next test for this adapter: paraphrased or hand-written policy sentences it has never seen in template form.
